@@ -41,38 +41,53 @@ then
 if [ `$VIRSHPATH snapshot-list $VMNAME | grep "$BACKUPTYPE" | wc -l` -ne 1 ]
 then
 	echo "$VMNAME has no daily backup, then I'll create it..."
-	$VIRSHPATH snapshot-create-as $VMNAME "$BACKUPTYPE" "$BACKUPTYPE for $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-daily.qcow2 --atomic --quiesce
+	$VIRSHPATH snapshot-create-as --domain $VMNAME --name daily --description "Daily for $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-daily.qcow2 --atomic --quiesce
 	echo "Current snapshot doesn't exist for $VMNAME, let's create it"
-	$VIRSHPATH snapshot-create-as $VMNAME "current_$TODAY" "current on $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current-$TODAY.qcow2 --atomic --quiesce
+	$VIRSHPATH snapshot-create-as --domain $VMNAME --name current --description "current on $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current.qcow2 --atomic --quiesce
 else
 	echo "Daily backup found for $VMNAME"
-	if [ `$VIRSHPATH snapshot-list $VMNAME | grep "current_$TODAY" | wc -l` -eq 1 ]
-	then
-		echo "Current snapshot already exist for today, exiting..."
-		exit 1;
-	elif [ `$VIRSHPATH snapshot-list $VMNAME | grep "current" | wc -l` -eq 1 ]
+	if [ `$VIRSHPATH snapshot-list $VMNAME | grep "current" | wc -l` -eq 1 ]
 	then
 		echo "Current snapshot exist for $VMNAME, let's merge it into daily and create new"
-		$VIRSHPATH blockcommit $VMNAME vda --base $STORAGEPATH/$VMNAME-daily.qcow2 --active --verbose --pivot
+		$VIRSHPATH blockcommit --domain $VMNAME vda --base $STORAGEPATH/$VMNAME-daily.qcow2 --active --verbose --pivot
 		if [ `$VIRSHPATH domblklist $VMNAME | grep vda | grep current | wc -l` -eq 0 ]
 		then
-			if [ -f $STORAGEPATH/$VMNAME-current-$YESTERDAY.qcow2 ];
+			if [ -f $STORAGEPATH/$VMNAME-current.qcow2 ];
 			then
 				echo "removing old snapshot file"
-				rm -f $STORAGEPATH/$VMNAME-current-$YESTERDAY.qcow2
-				$VIRSHPATH snapshot-delete $VMNAME "current_$YESTERDAY" --metadata
+				rm -f $STORAGEPATH/$VMNAME-current.qcow2
+				$VIRSHPATH snapshot-delete --domain $VMNAME current --metadata
 			fi
 			echo "Creating new current snapshot"
-		        $VIRSHPATH snapshot-create-as $VMNAME "current_$TODAY" "current for $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current-$TODAY.qcow2 --atomic --quiesce
+		        $VIRSHPATH snapshot-create-as --domain $VMNAME --name current --description "Current for $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current.qcow2 --atomic --quiesce
 		fi
 	else
 		echo "Current snapshot doesn't exist for $VMNAME, let's create it"
-	        $VIRSHPATH snapshot-create-as $VMNAME "current_$TODAY" "current on $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current-$TODAY.qcow2 --atomic --quiesce
+	        $VIRSHPATH snapshot-create-as --domain $VMNAME --name current --description "Current on $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current.qcow2 --atomic --quiesce
 	fi
 fi # fi for checking daily backup exist
 elif [ $BACKUPTYPE = "monthly" ]
 then
 	echo "Backup monthly"
+	if [ `$VIRSHPATH snapshot-list $VMNAME | grep "current" | wc -l` -eq 1 ]
+        then
+		echo "Current snapshot exist for $VMNAME, let's merge it into daily..."
+		$VIRSHPATH blockcommit --domain $VMNAME vda --base $STORAGEPATH/$VMNAME-daily.qcow2 --active --verbose --pivot
+		$VIRSHPATH snapshot-delete --domain $VMNAME "current" --metadata
+		rm -f $STORAGEPATH/$VMNAME-current.qcow2
+	fi
+	if [ `$VIRSHPATH snapshot-list $VMNAME | grep "daily" | wc -l` -eq 1 ]
+        then
+		echo "Daily snapshot exist for $VMNAME, let's merge it into base..."
+		$VIRSHPATH blockcommit --domain $VMNAME vda --base $STORAGEPATH/$VMNAME.qcow2 --active --verbose --pivot
+		$VIRSHPATH snapshot-delete --domain $VMNAME "daily" --metadata
+                rm -f $STORAGEPATH/$VMNAME-daily.qcow2
+	fi
+	echo "Create new daily snapshot"
+        $VIRSHPATH snapshot-create-as --domain $VMNAME --name daily --description "daily on $TODAY" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-daily.qcow2 --atomic --quiesce
+	echo "Create new current snapshot"	
+	$VIRSHPATH snapshot-create-as --domain $VMNAME --name current --description "current for $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current.qcow2 --atomic --quiesce
 else # only for emergency case.because we have another check for correct backup type
 	echo "I don't know what backup type you entered and how you enter here"
+	exit 1
 fi
