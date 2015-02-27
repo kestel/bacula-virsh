@@ -14,10 +14,10 @@ else
 	VMNAME=$1
 	if [[ "$2" != "daily" && "$2" != "Incremental" && "$2" != "Differential" ]]
 	then 
-		BACKUPTYPE="Incremental"
+		BACKUPTYPE="Full"
 	elif [[ "$2" != "Full" && "$2" != "monthly" ]]
 	then
-		BACKUPTYPE="Full"
+		BACKUPTYPE="Incremental"
 	else
 		echo "<backup type> must be daily (Incremental or Differential) or Full (monthly)"
 		exit 1
