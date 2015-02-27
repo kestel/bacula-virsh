@@ -12,10 +12,14 @@ then
 	exit 1
 else
 	VMNAME=$1
-	BACKUPTYPE=$2
-	if [[ "$BACKUPTYPE" != "daily" && "$BACKUPTYPE" != "monthly" ]]
+	if [[ "$2" != "daily" && "$2" != "Incremental" && "$2" != "Differential" ]]
+	then 
+		BACKUPTYPE="Incremental"
+	elif [[ "$2" != "Full" && "$2" != "monthly" ]]
 	then
-		echo "<backup type> must be daily or monthly"
+		BACKUPTYPE="Full"
+	else
+		echo "<backup type> must be daily (Incremental or Differential) or Full (monthly)"
 		exit 1
 	fi
 fi
@@ -35,10 +39,10 @@ then
 fi
 
 # if backup type is daily
-if [ $BACKUPTYPE = "daily" ]
+if [ $BACKUPTYPE = "Incremental" ]
 then
 # checking daily backup exist
-if [ `$VIRSHPATH snapshot-list $VMNAME | grep "$BACKUPTYPE" | wc -l` -ne 1 ]
+if [ `$VIRSHPATH snapshot-list $VMNAME | grep "daily" | wc -l` -ne 1 ]
 then
 	echo "$VMNAME has no daily backup, then I'll create it..."
 	$VIRSHPATH snapshot-create-as --domain $VMNAME --name daily --description "Daily for $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-daily.qcow2 --atomic --quiesce
@@ -66,9 +70,9 @@ else
 	        $VIRSHPATH snapshot-create-as --domain $VMNAME --name current --description "Current on $TIME" --disk-only --diskspec vda,snapshot=external,file=$STORAGEPATH/$VMNAME-current.qcow2 --atomic --quiesce
 	fi
 fi # fi for checking daily backup exist
-elif [ $BACKUPTYPE = "monthly" ]
+elif [ $BACKUPTYPE = "Full" ]
 then
-	echo "Backup monthly"
+	echo "Full backup"
 	if [ `$VIRSHPATH snapshot-list $VMNAME | grep "current" | wc -l` -eq 1 ]
         then
 		echo "Current snapshot exist for $VMNAME, let's merge it into daily..."
