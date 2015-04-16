@@ -2,7 +2,7 @@
 
 export LC_ALL=en_GB.UTF-8 
 
-VERSION="2.3.1"
+VERSION="2.4"
 STORAGEPATH="/kvm"
 VIRSHPATH=`which virsh`
 #VIRSHPATH="/usr/bin/virsh -d 4" 
@@ -66,9 +66,9 @@ fi
 
 if [ "$4" != "--no-quiesce" ]
 then
-   QUIESCE=""
+   QUIESCE="--quiesce"
 else
-   QUIESCE="--no-quiesce"
+   QUIESCE=""
 fi
 
 # checking for Base snapshot
