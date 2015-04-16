@@ -1,8 +1,8 @@
 #!/bin/bash
-# Version 2.3 
 
 export LC_ALL=en_GB.UTF-8 
 
+VERSION="2.3.1"
 STORAGEPATH="/kvm"
 VIRSHPATH=`which virsh`
 #VIRSHPATH="/usr/bin/virsh -d 4" 
@@ -10,6 +10,8 @@ VIRSHPATH=`which virsh`
 TIME=`date '+%d-%m-%Y_%H-%M'`
 YESTERDAY=`date -d yesterday '+%d-%m-%Y'`
 TODAY=`date '+%d-%m-%Y'`
+
+echo `basename $0` version $VERSION
 
 ### Functions
 remove_snapshot_file() {
